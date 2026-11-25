@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}首页看板 · 选题数据池{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h2>首页看板</h2>
+    <p>每日 {{ push_time }} 自动生成并推送 · 数据变动后权重实时重算</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="mvs-btn mvs-btn--default mvs-btn--sm" data-action="crawl">抓取热点</button>
+    <button class="mvs-btn mvs-btn--default mvs-btn--sm" data-action="generate">生成候选</button>
+    <button class="mvs-btn mvs-btn--default mvs-btn--sm" data-action="regenerate" title="清掉今日草稿重新生成，已采用/弃用的会保留">重新生成</button>
+    <button class="mvs-btn mvs-btn--default mvs-btn--sm" data-action="send">发送邮件</button>
+    <button class="mvs-btn mvs-btn--primary mvs-btn--sm" data-action="daily">执行每日流程</button>
+  </div>
+</div>
+
+<div class="section">
+  <h3 style="font-size:16px;font-weight:500;margin:0 0 12px;">今日两条候选预览</h3>
+  {% if candidates %}
+  <div class="grid grid-2">
+    {% for c in candidates %}
+    <div class="card candidate-card">
+      <div class="dir">候选 {{ c.slot }} · {{ c.direction }} · 得分 {{ '%.3f'|format(c.score) }}</div>
+      <div class="title">{{ c.title }}</div>
+      <div class="script">{{ c.script }}</div>
+      <div>
+        {% for t in (c.tags | fromjson) %}<span class="tag">#{{ t }}</span>{% endfor %}
+      </div>
+      <div class="why">{{ c.rationale }}</div>
+      {% if c.status == 'draft' %}
+      <div style="margin-top:16px;display:flex;gap:8px;">
+        <button class="mvs-btn mvs-btn--primary mvs-btn--sm" onclick="setCandidateStatus({{ c.id }}, 'adopted', this)">标记采用</button>
+        <button class="mvs-btn mvs-btn--default mvs-btn--sm" onclick="setCandidateStatus({{ c.id }}, 'discarded', this)">弃用</button>
+      </div>
+      {% else %}
+      <div class="why" style="margin-top:12px;">状态：{{ '已采用' if c.status == 'adopted' else '已弃用' }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card empty">
+    <div class="empty-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="1.5"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+    </div>
+    <h4>今日还没有候选</h4>
+    <p>点击上方"生成候选"，用 DeepSeek 按当前权重和热点生成两条选题。</p>
+    <button class="mvs-btn mvs-btn--primary" data-action="generate">生成候选</button>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card section">
+  <h3>近期表现趋势</h3>
+  {% if trends %}
+  <div class="trend">
+    {% for t in trends %}
+    <div class="trend-bar" style="height: {{ [4, (t.views / max_views * 100)|round|int]|max }}%;" title="{{ t.date }} · {{ t.views }} 播放"></div>
+    {% endfor %}
+  </div>
+  <div class="trend-labels">
+    {% for t in trends %}<span>{{ t.date[5:] }}</span>{% endfor %}
+  </div>
+  {% else %}
+  <p class="hint">录入作品数据后显示按发布日的平均播放趋势。</p>
+  {% endif %}
+</div>
+
+<div class="card section">
+  <h3>当前权重（自动计算）</h3>
+  {% for key, value in engine.weights.items() %}
+  <div class="weight-row">
+    <div class="weight-name">{{ weight_labels.get(key, key) }}</div>
+    <div class="weight-track"><div class="weight-fill" style="width: {{ (value * 100)|round(1) }}%;"></div></div>
+    <div class="weight-value">{{ '%.1f'|format(value * 100) }}%</div>
+  </div>
+  {% endfor %}
+  <div class="divider"></div>
+  <div class="hint">权重由 Spearman 秩相关归一化得出，全量数据参与、近期权重大。最近重算：{{ engine.last_change }}</div>
+  <div class="hint" style="margin-top:8px;">{{ engine.data_gap_note }}</div>
+</div>
+
+<div class="section">
+  <h3 style="font-size:16px;font-weight:500;margin:0 0 12px;">快捷入口</h3>
+  <div class="grid grid-3">
+    <a class="entry" href="/works"><div class="t">作品录入与历史</div><div class="d">录入新数据后权重自动重算</div></a>
+    <a class="entry" href="/hotspots"><div class="t">热点列表</div><div class="d">爬虫抓取的赛道热点，只读展示</div></a>
+    <a class="entry" href="/settings"><div class="t">推送配置</div><div class="d">SMTP、时间、DeepSeek、权重参数</div></a>
+  </div>
+</div>
+
+{% endblock %}

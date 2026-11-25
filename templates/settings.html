@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}推送配置 · 选题数据池{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h2>推送配置</h2>
+    <p>密钥只存本机数据库，页面不回显明文 · 修改后保存即生效</p>
+  </div>
+</div>
+
+<form id="settings-form" onsubmit="event.preventDefault(); saveSettings(this);">
+  <div class="grid grid-2 section">
+    <div class="card">
+      <h3>邮件推送</h3>
+      <div class="grid grid-2" style="gap:12px;">
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">SMTP 主机</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input" name="smtp_host" value="{{ s.smtp_host }}" placeholder="smtp.qq.com"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">端口</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input num" name="smtp_port" value="{{ s.smtp_port }}"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">发件邮箱</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input" name="mail_from" value="{{ s.mail_from }}"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">收件邮箱</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input" name="mail_to" value="{{ s.mail_to }}"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">SMTP 账号</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input" name="smtp_user" value="{{ s.smtp_user }}"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">授权码</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input" type="password" name="smtp_password" placeholder="{{ '已配置，留空不改' if smtp_password_set else '填写授权码' }}"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">推送时间</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input" name="push_time" value="{{ s.push_time }}" placeholder="20:00"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">SSL</label>
+          <div class="mvs-input-wrapper">
+            <select class="mvs-input" name="smtp_use_ssl">
+              <option value="1" {% if s.smtp_use_ssl == '1' %}selected{% endif %}>是（465）</option>
+              <option value="0" {% if s.smtp_use_ssl != '1' %}selected{% endif %}>否（STARTTLS）</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:16px;"><button class="mvs-btn mvs-btn--primary mvs-btn--sm" type="button" data-action="send">测试发送</button></div>
+    </div>
+
+    <div class="card">
+      <h3>DeepSeek 接口</h3>
+      <div class="grid grid-2" style="gap:12px;">
+        <div class="mvs-input-group" style="grid-column:1/-1;">
+          <label class="mvs-input-label">API Key</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input" type="password" name="deepseek_api_key" placeholder="{{ '已配置，留空不改' if api_key_set else 'sk-...' }}"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">Base URL</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input" name="deepseek_base" value="{{ s.deepseek_base }}"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">模型</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input" name="deepseek_model" value="{{ s.deepseek_model }}"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">每日候选数</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input num" name="candidates_per_day" value="{{ s.candidates_per_day }}"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">文案上限（字）</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input num" name="script_max_chars" value="{{ s.script_max_chars }}"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">标签数</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input num" name="tags_per_candidate" value="{{ s.tags_per_candidate }}"></div>
+        </div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">temperature（0.1–2.0）</label>
+          <div class="mvs-input-wrapper"><input class="mvs-input num" name="temperature" value="{{ s.temperature or '1.3' }}" step="0.1"></div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:12px;">temperature 越高用词和句式越发散（默认 1.3）。它只改变表达，不决定选题方向。未配置 API Key 时不会生成候选，系统明确报错，不产出假文案。</div>
+    </div>
+  </div>
+
+  <div class="card section">
+    <h3>权重引擎</h3>
+    <div class="hint" style="margin-bottom:16px;">权重由你的真实数据自动计算（全量数据 + 时间衰减，半衰期可配）。以下为当前值，非抖音官方系数。样本少于 10 条时沿用默认值。</div>
+    <div class="grid grid-2">
+      <div>
+        {% for key, value in engine.weights.items() %}
+        <div class="weight-row">
+          <div class="weight-name">{{ weight_labels.get(key, key) }}</div>
+          <div class="weight-track"><div class="weight-fill" style="width: {{ (value * 100)|round(1) }}%;"></div></div>
+          <div class="weight-value">{{ '%.1f'|format(value * 100) }}%</div>
+        </div>
+        {% endfor %}
+        <div class="divider"></div>
+        <div class="grid grid-2" style="gap:12px;">
+          <div class="mvs-input-group">
+            <label class="mvs-input-label">时间衰减半衰期（天）</label>
+            <div class="mvs-input-wrapper"><input class="mvs-input num" name="weight_half_life" value="{{ s.weight_half_life or '30' }}"></div>
+          </div>
+          <div class="mvs-input-group">
+            <label class="mvs-input-label">权重模式</label>
+            <div class="mvs-input-wrapper">
+              <select class="mvs-input" name="weights_locked">
+                <option value="0" {% if s.weights_locked != '1' %}selected{% endif %}>自动更新</option>
+                <option value="1" {% if s.weights_locked == '1' %}selected{% endif %}>手动锁定</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="mvs-input-group">
+          <label class="mvs-input-label">方向词典（逗号分隔）</label>
+          <div class="mvs-textarea-wrapper"><textarea class="mvs-textarea" name="directions" style="min-height:100px;">{{ (s.directions or '[]') | fromjson | join('，') }}</textarea></div>
+        </div>
+        <div class="hint" style="margin-top:8px;">DeepSeek 从此列表选方向，避免自由生成导致分组碎片化。</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-bottom:24px;">
+    <button class="mvs-btn mvs-btn--primary" type="submit">保存配置</button>
+    <button class="mvs-btn mvs-btn--default" type="button" data-action="recompute">立即重算权重</button>
+  </div>
+</form>
+
+<div class="card section">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div>
+      <h3 style="margin:0;">当前提示词（只读）</h3>
+      <p class="hint" style="margin:6px 0 0;">这是本次生成实际发给 DeepSeek 的原文，随上方配置、当日热点与近期文案实时变化。仅展示，不可编辑——修改提示词需改代码。</p>
+    </div>
+    <span class="tag">temperature {{ prompt_preview.temperature }}</span>
+  </div>
+  {% if prompt_preview.prompts %}
+  <div class="hint" style="margin-top:12px;">当前注入：热点 {{ prompt_preview.hotspot_count }} 条 · 避开文案 {{ prompt_preview.avoid_count }} 条 · 文案上限 {{ prompt_preview.max_chars }} 字 · 标签 {{ prompt_preview.tag_count }} 个</div>
+  {% for p in prompt_preview.prompts %}
+  <details class="prompt-item" {% if loop.first %}open{% endif %}>
+    <summary>第 {{ p.slot }} 条 · {{ p.role }} · {{ p.direction }}</summary>
+    <div class="prompt-toolbar">
+      <button type="button" class="mvs-btn mvs-btn--default mvs-btn--sm" data-copy-prompt="{{ loop.index0 }}">一键复制</button>
+      <span class="hint">复制后可直接粘贴到对话里，让我按你的想法改写</span>
+    </div>
+    <pre class="prompt-body" id="prompt-{{ loop.index0 }}">{{ p.text }}</pre>
+  </details>
+  {% endfor %}
+  {% else %}
+  <p class="hint" style="margin-top:12px;">{{ prompt_preview.error }}</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>权重变更记录</h3>
+  {% if weight_history %}
+  <div class="table-wrap" style="border:none;">
+    <table>
+      <thead><tr><th>时间</th><th>触发</th><th>样本数</th><th>权重</th></tr></thead>
+      <tbody>
+        {% for h in weight_history %}
+        <tr>
+          <td class="num">{{ h.changed_at }}</td>
+          <td><span class="tag">{{ '自动' if h.trigger == 'auto' else ('手动' if h.trigger == 'manual' else h.trigger) }}</span></td>
+          <td class="num">{{ h.sample_size }}</td>
+          <td class="mono-note">{{ h.weights }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="hint">录入作品数据后，每次权重重算都会留痕。</p>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function saveSettings(form) {
+  const fd = new FormData(form);
+  const payload = Object.fromEntries(fd.entries());
+  const btn = form.querySelector('[type=submit]');
+  btnLoading(btn, true);
+  try {
+    await api('/api/settings', { method: 'POST', body: payload });
+    toast('配置已保存');
+    setTimeout(() => location.reload(), 600);
+  } catch (e) { toast(e.message, 'error'); btnLoading(btn, false); }
+}
+
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); done(); }
+  catch (e) { toast('复制失败，请手动选中文本', 'error'); }
+  document.body.removeChild(ta);
+}
+
+function copyPrompt(index) {
+  const el = document.getElementById('prompt-' + index);
+  if (!el) return;
+  const text = el.textContent;
+  const done = () => toast('提示词已复制');
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-copy-prompt]');
+  if (btn) copyPrompt(btn.getAttribute('data-copy-prompt'));
+});
+</script>
+{% endblock %}

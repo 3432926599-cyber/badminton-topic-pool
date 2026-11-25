@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Runtime database — contains local secrets (API keys, SMTP credentials)
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.db-journal
+
+# Local tooling
+.workbuddy/
+
+# OS
+.DS_Store
+Thumbs.db

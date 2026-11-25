@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{% block title %}羽毛球选题数据池{% endblock %}</title>
+  <link rel="stylesheet" href="/static/marvis-base.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>选题数据池</h1>
+      <p>羽毛球日常 · 动态权重引擎</p>
+    </div>
+    <nav>
+      <ul class="nav">
+        <li><a href="/" class="{% if active == 'dashboard' %}active{% endif %}">首页看板</a></li>
+        <li><a href="/works" class="{% if active == 'works' %}active{% endif %}">作品录入与历史</a></li>
+        <li><a href="/hotspots" class="{% if active == 'hotspots' %}active{% endif %}">热点列表</a></li>
+        <li><a href="/settings" class="{% if active == 'settings' %}active{% endif %}">推送配置</a></li>
+      </ul>
+    </nav>
+  </aside>
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="/static/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

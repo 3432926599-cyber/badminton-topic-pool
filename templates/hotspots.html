@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}热点列表 · 选题数据池{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h2>热点列表</h2>
+    <p>爬虫从公开源抓取的羽毛球赛道热点，纯展示 · 共 {{ hotspots|length }} 条</p>
+  </div>
+  <span class="hint">抓不到时不编造数据，列表可能为空</span>
+</div>
+
+{% if hotspots %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>日期</th><th>热点词 / 标题</th><th>来源</th><th>热度</th><th>链接</th></tr>
+    </thead>
+    <tbody>
+      {% for h in hotspots %}
+      <tr>
+        <td class="num">{{ h.crawl_date }}</td>
+        <td>{{ h.keyword }}</td>
+        <td><span class="tag">{{ h.source }}</span></td>
+        <td class="num">{{ h.heat or '—' }}</td>
+        <td>
+          {% if h.url %}
+          <a href="{{ h.url }}" target="_blank" rel="noopener" style="color:#0052d9;text-decoration:none;">查看</a>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card empty">
+  <div class="empty-icon">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+  </div>
+  <h4>暂无热点数据</h4>
+  <p>每日 20:00 自动抓取。公开源当日无羽毛球词条时会留空，不会编造内容。</p>
+  <button class="mvs-btn mvs-btn--primary" data-action="crawl">立即抓取</button>
+</div>
+{% endif %}
+
+{% endblock %}
